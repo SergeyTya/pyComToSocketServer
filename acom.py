@@ -15,7 +15,7 @@ class OutputProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         # print('data received', repr(data))
-        self.transport.close()
+        # self.transport.close()
         lock.release()
        
 
@@ -33,10 +33,10 @@ class OutputProtocol(asyncio.Protocol):
 
 async def com_writer(data):
     transport, protocol = await serial_asyncio.create_serial_connection(loop, OutputProtocol, 'COM4', baudrate=230400)
-    transport.write(data)
-    # while True:
-    #     await asyncio.sleep(0.3)
-    #     protocol.resume_reading()
+    # transport.write(data)
+    while True:
+        await lock.acquire()
+        transport.write(bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x05, 0x85, 0xC9]))
 
 
 async def cycle():
@@ -47,6 +47,7 @@ async def cycle():
 
 
 loop = asyncio.get_event_loop()
-loop.run_until_complete(cycle())
+# loop.run_until_complete(cycle())
+loop.run_until_complete(com_writer(0))
 loop.run_forever()
 loop.close()
