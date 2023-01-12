@@ -1,7 +1,6 @@
 import asyncio
 from serial_asyncio import open_serial_connection
 
-
 buf_trans = []
 buf_data = []
 lock = asyncio.Lock()
@@ -37,22 +36,31 @@ async def com_communicate():
         await lock.acquire()
         try:
             if len(buf_trans) > 0:
-                print('com get job')
                 transport = buf_trans.pop()
+
+                if len(buf_trans) > 100:
+                    for x in range(len(buf_trans)):
+                        buf_trans[x].write("Server_buisy".encode())
+                    buf_trans.clear()
+                    buf_data.clear()
+                    continue
+
                 mes = buf_data.pop()
-                writer.write(bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x05, 0x85, 0xC9]))
+                # writer.write(bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x05, 0x85, 0xC9]))
+                writer.write(bytes([0x01, 0x14, 0x00, 0x2F])) # scope
                 deadline = loop.time() + 1
                 try:
                     async with asyncio.timeout_at(deadline):
                         line = await reader.read(256)
+                        print(line)
                         transport.write(('ok-> ' + mes + "\n").encode())
                 except TimeoutError:
                     print("The long operation timed out, but we've handled it.")
                     transport.write(('TO-> ' + mes + "\n").encode())
-            else:
-                await asyncio.sleep(0.01)
         finally:
+            await asyncio.sleep(0.025)
             lock.release()
+
 
 
 
