@@ -6,7 +6,7 @@ buf_data = []
 lock = asyncio.Lock()
 
 
-class EchoServerClientProtocol(asyncio.Protocol):
+class SocketServerProtocol(asyncio.Protocol):
     transport = None
 
     def connection_made(self, transport):
@@ -65,7 +65,7 @@ async def com_communicate():
 
 
 loop = asyncio.get_event_loop()
-coro_socket = loop.create_server(EchoServerClientProtocol, '127.0.0.1', 8888)
+coro_socket = loop.create_server(SocketServerProtocol, '127.0.0.1', 8888)
 loop.create_task(com_communicate())
 server = loop.run_until_complete(coro_socket)
 
