@@ -2,74 +2,74 @@ import asyncio
 from serial_asyncio import open_serial_connection
 
 
-# buf = []
-# lock = asyncio.Lock()
+buf_trans = []
+buf_data = []
+lock = asyncio.Lock()
 
-# def readMes(mes):
-#     if len(mes) > 5:
-#         print('<-:{!r}'.format(message))
-#         loop.create_task(writeToBuf([1, 3, 0, 0, 5, 0x85, 0xCD]))
-#     pass
 
-# async def writeToBuf(data):
-#     async with lock:
-#         print('socket acquired lock')
-#         buf.append(data)
+class EchoServerClientProtocol(asyncio.Protocol):
+    transport = None
 
-# class EchoServerClientProtocol(asyncio.Protocol):
-#     tran = None
-#     def connection_made(self, transport):
-#         self.tran = transport
-#         peername = transport.get_extra_info('peername')
-#         print('Connection from {}'.format(peername))
-#         self.transport = transport
+    def connection_made(self, transport):
+        self.transport = transport
+        peername = transport.get_extra_info('peername')
+        print('Connection from {}'.format(peername))
 
-#     def data_received(self, data):
-#         nm= self.tran.get_extra_info('peername')
-#         message = data.decode()
-#         # print('From:{!r}'.format(nm))
-#         # self.transport.write(('Echoed back: {}'.format(message)).encode())
-#         readMes(message)
+    def data_received(self, data):
+        mes = str(data, "utf-8").rstrip()
+        if (len(mes)) > 0:
+            loop.create_task(dputer(self.transport, mes))
 
-    
 
-async def run():
-    reader, writer = await open_serial_connection(url='COM4', baudrate=230400)
+async def dputer(transport, mes):
+    await lock.acquire()
+    try:
+        buf_trans.append(transport)
+        buf_data.append(mes)
+    finally:
+        lock.release()
+
+
+async def com_communicate():
+    reader, writer = await open_serial_connection(loop=loop, url='COM4', baudrate=230400)
+    print('com connected')
     while True:
-        # # await lock.acquire()
-        # try:
-        #     # print('com acquired lock')
-        #     # 
-        #     # print(str(line, 'utf-8'))
-        #     # asyncio.sleep(10)
-        #     if len (buf) != 0:
-        #         print("->")
-        #         writer.write([1, 3, 0, 0, 5, 0x85, 0xCD])
-        # finally:
-        #     # print('com released lock')
-        #     lock.release()
-        # writer.write([1, 3, 0, 0, 5, 0x85, 0xCD])
-        # await asyncio.sleep(1)
-        line = await reader.readline()
-        print(line)
+        await lock.acquire()
+        try:
+            if len(buf_trans) > 0:
+                print('com get job')
+                transport = buf_trans.pop()
+                mes = buf_data.pop()
+                writer.write(bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x05, 0x85, 0xC9]))
+                deadline = loop.time() + 1
+                try:
+                    async with asyncio.timeout_at(deadline):
+                        line = await reader.read(256)
+                        transport.write(('ok-> ' + mes + "\n").encode())
+                except TimeoutError:
+                    print("The long operation timed out, but we've handled it.")
+                    transport.write(('TO-> ' + mes + "\n").encode())
+            else:
+                await asyncio.sleep(0.01)
+        finally:
+            lock.release()
 
 
-       
 
 loop = asyncio.get_event_loop()
-# coro_socket = loop.create_server(EchoServerClientProtocol, '127.0.0.1', 8888)
-# server = loop.run_until_complete(coro_socket)
-loop.run_until_complete(run())
+coro_socket = loop.create_server(EchoServerClientProtocol, '127.0.0.1', 8888)
+loop.create_task(com_communicate())
+server = loop.run_until_complete(coro_socket)
 
 
-# # Serve requests until Ctrl+C is pressed
-# print('Serving on {}'.format(server.sockets[0].getsockname()))
-# try:
-#     loop.run_forever()
-# except KeyboardInterrupt:
-#     pass
+# Serve requests until Ctrl+C is pressed
+print('Serving on {}'.format(server.sockets[0].getsockname()))
+try:
+    loop.run_forever()
+except KeyboardInterrupt:
+    pass
 
-# # Close the server
-# server.close()
-# loop.run_until_complete(server.wait_closed())
-# loop.close()
+# Close the server
+server.close()
+loop.run_until_complete(server.wait_closed())
+loop.close()
