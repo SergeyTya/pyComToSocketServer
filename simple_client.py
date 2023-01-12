@@ -42,7 +42,7 @@ async def client():
                     pass
         except TimeoutError:
             print("Time out")
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.50)
 
 
 

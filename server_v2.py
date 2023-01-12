@@ -19,6 +19,7 @@ class ComServerProtocol(asyncio.Protocol):
 
     serial_lock = asyncio.Lock()
     res = 0
+    time_elapsed = 0
 
     def connection_made(self, transport):
         self.transport = transport
@@ -33,23 +34,24 @@ class ComServerProtocol(asyncio.Protocol):
         print('pause writing')
       
     async def write_data(self, data):
-        deadline = loop.time() + 0.1
+        deadline = loop.time() + 1.0
         try:
             async with asyncio.timeout_at(deadline):
                 await self.serial_lock.acquire()
                 try:
+                    print(loop.time() - self.time_elapsed)
                     await asyncio.sleep(0.05)
                     self.transport.write(data)
                 finally:
                     pass
         except TimeoutError:
             return 0
+        self.time_elapsed = loop.time()
         return self.res
         
         
-async def com_reader(socket_transport, data):         
+async def com_reader(socket_transport, data):        
     res = await serial_protocol.write_data(bytes([0x01, 0x14, 0x00, 0x2F]))
-    print(res)    
     socket_transport.write("done".encode())
 
 
