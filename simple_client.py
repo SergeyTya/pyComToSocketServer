@@ -1,6 +1,13 @@
 import asyncio
+import utilities as util
+
+import json
+from server_cmd import ServerFrame
 
 lock = asyncio.Lock()
+
+
+
 
 class EchoClientProtocol(asyncio.Protocol):
 
@@ -14,7 +21,8 @@ class EchoClientProtocol(asyncio.Protocol):
         print('Data sent: {!r}'.format(self.message))
 
     def data_received(self, data):
-        print('Data received: {!r}'.format(data.decode()))
+        # u = ServerFrame.read(data)
+        print(data.decode())
         lock.release()
 
     def connection_lost(self, exc):
@@ -25,7 +33,7 @@ class EchoClientProtocol(asyncio.Protocol):
         self.tr.write(self.message.encode())
 
 async def client():
-    message = 'Hello World!'
+    message = ''
     transport, protocol = await loop.create_connection(
         lambda: EchoClientProtocol(message, on_con_lost),
         '127.0.0.1', 8888)
@@ -36,7 +44,8 @@ async def client():
             async with asyncio.timeout_at(deadline):
                 await lock.acquire()
                 try:
-                    protocol.message = "next"
+                    data = json.dumps({'cmd': 'RAW' , 'data': [0x01, 0x03, 0, 0, 0, 5]})
+                    protocol.message =data
                     protocol.resume_writing(transport)
                 finally:
                     pass
