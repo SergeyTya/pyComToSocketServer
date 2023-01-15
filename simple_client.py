@@ -2,12 +2,11 @@ import asyncio
 import utilities as util
 
 import json
-from server_cmd import ServerFrame
+import server_cmd as cmd
 
 lock = asyncio.Lock()
 
-
-
+req = cmd.Iframe()
 
 class EchoClientProtocol(asyncio.Protocol):
 
@@ -22,7 +21,9 @@ class EchoClientProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         # u = ServerFrame.read(data)
-        print(data.decode())
+        req.load_response_from_socket(data.decode())
+        print(req.get_socket_response_frame)
+        
         lock.release()
 
     def connection_lost(self, exc):
@@ -44,8 +45,8 @@ async def client():
             async with asyncio.timeout_at(deadline):
                 await lock.acquire()
                 try:
-                    data = json.dumps({'cmd': 'RAW' , 'data': [0x01, 0x03, 0, 0, 0, 5]})
-                    protocol.message =data
+                    req = cmd.Builder.build_raw_request([0x1, 0x3, 0, 0, 0, 5])
+                    protocol.message = req.load_request_to_socket()
                     protocol.resume_writing(transport)
                 finally:
                     pass

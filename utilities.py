@@ -10,6 +10,7 @@ import struct
 # Check crc in income frame
 # --------------------------------------------------------------------------- #
 def  check_CRC_frame(frame):
+    if frame is None: return False
     crc_val = (int(frame[len(frame)-2]) << 8) + int(frame[len(frame)-1])
     crc_frm = computeCRC(frame[:len(frame)-2])
     return crc_val == crc_frm

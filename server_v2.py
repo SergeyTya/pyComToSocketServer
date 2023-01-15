@@ -3,7 +3,13 @@ import serial_asyncio
 import utilities as util
 from serial_asyncio import open_serial_connection
 import json
-from server_cmd import ServerFrame
+import server_cmd as adapter
+
+
+def log(mes:str):
+    mes ="{}: {}".format(str(loop.time()), mes)
+    if loop.log_enable: print(mes)
+    
 
 class SerialToSocketServer:
     writer = None
@@ -23,24 +29,34 @@ class SocketServerProtocol(asyncio.Protocol):
 
     def data_received(self, data):
         mes = str(data, "utf-8").rstrip()
-        res = ServerFrame.read(mes)
-        if res is not None:
-            loop.create_task(com_reader(self.transport, bytes(res.data_with_crc)))
+        log("--> " + mes)
+        if mes is not None:
+            loop.create_task(com_reader(self.transport, mes))
 
-async def com_reader(socket_transport, data:bytes):
+async def com_reader(socket_transport, data:str):
+    req = adapter.Builder.build_frame(data)
+    if req is None: 
+        return 
+    if req.cmd == adapter.Iframe.Frame_types.ERROR:
+        socket_transport.write(req.get_socket_response_frame().encode())
+        return
     await loop.sts.lock.acquire()
     try:
         start_time = loop.time()
-        # loop.sts.writer.write(bytes([0x01, 0x14, 0x00, 0x2F]))
-        loop.sts.writer.write(data)
+        log("--> " + str(req.load_data_to_serial()))
+        loop.sts.writer.write(req.load_data_to_serial())
         await asyncio.sleep(0.035)
         deadline = loop.time() + 1
         try:
             async with asyncio.timeout_at(deadline):
                 res = await loop.sts.reader.read(256)
+                if loop.log_enable: print(res)
+                log("<-- " + str(res))
         except TimeoutError:
                 res = "Timeout"
-                print(res)
+                log("Serial port time out")
+        except PermissionError:
+                log("Port error")
     finally:
         loop.sts.lock.release()   
 
@@ -48,18 +64,12 @@ async def com_reader(socket_transport, data:bytes):
     if type(res) is str:
         socket_transport.write(res.encode())
     elif type(res) is bytes:
-        raw_frm = ServerFrame.load_raw(res)
-        if raw_frm is not None:
-            socket_transport.write(raw_frm)
+        frame = req.load_response_from_serial(res)
+        if frame is not None:
+            socket_transport.write(frame.encode())
+            log("<-- " + frame)
         else:
             socket_transport.write("crc fault".encode())
-
-        
-        # if util.check_CRC_frame(res):
-        #     socket_transport.write("crc ok".encode())
-        # else: 
-        #     socket_transport.write("crc fault".encode())
-        #     print("crc fault")
     else:
         socket_transport.write("wrong frame".encode())
         print(type(res))
@@ -82,13 +92,14 @@ async def start_serial_server(loop=None, com_name='COM4', com_speed=230400):
     loop.sts.lock = asyncio.Lock()
     return reader, writer
 
-async def start_server(loop=None, com_name='COM4', com_speed=230400,ip = 'localhost', port=8888 ):
+async def start_server(loop=None, com_name='COM5', com_speed=230400,ip = 'localhost', port=8888 ):
     if loop is None:
         loop = asyncio.get_event_loop()
 
     serial_to_socket = SerialToSocketServer()
     loop.sts = serial_to_socket
 
+    loop.log_enable = True
     await start_serial_server(loop, com_name, com_speed)
     await start_socket_server(loop, ip, port)
 
