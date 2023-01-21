@@ -18,6 +18,10 @@ class SocketServerProtocol(asyncio.Protocol):
         mes = str(data, "utf-8").rstrip()
         if (len(mes)) > 0:
             loop.create_task(dputer(self.transport, mes))
+    
+    def connection_lost(self):
+        peername = self.transport.get_extra_info('peername')
+        print('Connection closed {}'.format(peername))
 
 
 async def dputer(transport, mes):
@@ -30,7 +34,7 @@ async def dputer(transport, mes):
 
 
 async def com_communicate():
-    reader, writer = await open_serial_connection(loop=loop, url='COM4', baudrate=230400)
+    reader, writer = await open_serial_connection(loop=loop, url='COM5', baudrate=230400)
     print('com connected')
     while True:
         await lock.acquire()

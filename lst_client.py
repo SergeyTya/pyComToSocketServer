@@ -42,19 +42,7 @@ async def client():
     loop.create_task(wait_for_con_lost(transport))
 
     while True:
-        # try:
-        #     deadline = loop.time() + 0.1
-        #     async with asyncio.timeout_at(deadline):
-        #         await lock.acquire()
-        #         try:
-        #             req = cmd.Builder.build_raw_request([0x1, 0x3, 0, 0, 0, 5])
-        #             protocol.message = req.load_request_to_socket()
-        #             protocol.resume_writing(transport)
-        #         finally:
-        #             pass
-        # except TimeoutError:
-        #     print("Time out")
-        await asyncio.sleep(0.50)
+        await asyncio.sleep(0.05)
 
 
 
