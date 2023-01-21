@@ -1,13 +1,6 @@
 import asyncio
 import utilities as util
 
-import json
-import server_cmd as cmd
-
-lock = asyncio.Lock()
-
-req = cmd.Iframe()
-
 class EchoClientProtocol(asyncio.Protocol):
 
     def __init__(self, message, on_con_lost):
@@ -20,11 +13,7 @@ class EchoClientProtocol(asyncio.Protocol):
         print('Data sent: {!r}'.format(self.message))
 
     def data_received(self, data):
-        # u = ServerFrame.read(data)
-        # req.load_response_from_socket(data.decode())
-        # print(req.get_socket_response_frame)
         print("--->" + str(data))
-        lock.release()
 
     def connection_lost(self, exc):
         print('The server closed the connection')
@@ -41,18 +30,9 @@ async def client():
     loop.create_task(wait_for_con_lost(transport))
 
     while True:
-        try:
-            deadline = loop.time() + 0.1
-            async with asyncio.timeout_at(deadline):
-                await lock.acquire()
-                try:
-                    req = bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x05, 0x85, 0xC9])
-                    protocol.message = req
-                    protocol.resume_writing(transport)
-                finally:
-                    pass
-        except TimeoutError:
-            print("Time out")
+        req = bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x05, 0x85, 0xC9])
+        protocol.message = req
+        protocol.resume_writing(transport)
         await asyncio.sleep(0.50)
 
 

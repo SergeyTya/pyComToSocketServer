@@ -1,12 +1,8 @@
 import asyncio
 import utilities as util
 
-import json
-import server_cmd as cmd
 
 lock = asyncio.Lock()
-
-req = cmd.Iframe()
 
 class EchoClientProtocol(asyncio.Protocol):
 
