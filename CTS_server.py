@@ -11,6 +11,8 @@ class SerialToSocketServer:
     reader = None
     server = None
     lock   = None
+    com_name = ""
+    com_speed=0
 
 
 def log(mes:str):
@@ -19,67 +21,54 @@ def log(mes:str):
     
 class SocketServerProtocol(asyncio.Protocol):
 
-    class Client_type:
-        MODBUS   = "modbus"
-        RAW      = "raw"
-        LISTENER = "listener"
-        DEFAULT  = ""
+    client_type = [   
+        "raw", 
+        "modbus",
+        "listener"
+    ]
         
-    type:Client_type = Client_type.MODBUS
-
     def parse(self, mes):
         res= shlex.split(mes)
         res = list(res)
         try:
             if 'type' in res:
                 tp = res[res.index('type')+1]
-                if tp == self.Client_type.LISTENER: 
-                    return self.Client_type.LISTENER
-                if tp == self.Client_type.RAW:    
-                    return self.Client_type.RAW
-                if tp == self.Client_type.MODBUS:  
-                     return self.Client_type.MODBUS
-                return self.Client_type.DEFAULT
+                if tp in self.client_type:
+                    self.type = tp
+                    if self.type == self.client_type[2]:
+                        if self.transport not in loop.listeners:
+                            loop.listeners.append(self.transport)
+
+                    return 'done'
+            if 'info' in res:
+                return "{}:{}".format(loop.sts.com_name, str(loop.sts.com_speed))
         except IndexError: pass
 
     def connection_made(self, transport):
+        self.type = self.client_type[0]
         self.transport = transport
-        peername = transport.get_extra_info('peername')
-        print('Connection from {}'.format(peername))
+        peer = self.transport.get_extra_info('peername')
+        print('Connection from {}'.format("{} {}".format(peer[0],peer[1])))
 
     def data_received(self, data):
         if data is None:
             return
         try:
             mes = data.decode()
-            tp = self.parse(mes)
-            log(tp)
-            if tp is not None:
-                if tp is not self.Client_type.DEFAULT:
-                    self.type = tp
-                    log  ("setup client type " + str(tp))
-                    print("Setup client type " + str(tp))
-                else:
-                    self.transport.write(shlex.join([self.Client_type.MODBUS , self.Client_type.RAW, self.Client_type.LISTENER]).encode())
-                # add listener client
-                if self.type is self.Client_type.LISTENER:
-                    if self.transport not in loop.listeners:
-                        loop.listeners.append(self.transport)
-                else:
-                    if self.transport in loop.listeners:
-                        loop.listeners.remove(self.transport)
-                self.transport.write("done".encode())
+            cmd = self.parse(mes)
+            if cmd is not None:
+                self.transport.write(cmd.encode())
                 return
         except UnicodeDecodeError: pass
         except ValueError:         pass
 
-        if self.type is self.Client_type.MODBUS:
-            loop.create_task(Modbus_converter(self.transport, data))
-           
-        if self.type is self.Client_type.RAW:
+        if self.type == self.client_type[0]:
             loop.create_task(RAW_converter(self.transport, data))
-            
+
+        if self.type == self.client_type[1]:
+            loop.create_task(Modbus_converter(self.transport, data))
         
+       
     def connection_lost(self, exec):
         peername = self.transport.get_extra_info('peername')
         print('Connection closed {}'.format(peername))
@@ -180,10 +169,12 @@ async def start_serial_server(loop=None, com_name='COM4', com_speed=230400):
     loop.sts.lock = asyncio.Lock()
     return reader, writer
 
-async def start_server(loop=None, com_name='COM5', com_speed=230400,ip = 'localhost', port=8888 ):
+async def start_server(loop=None, com_name='COM5', com_speed=230400,ip = '124.0.0.1', port=8888 ):
     if loop is None:
         loop = asyncio.get_event_loop()
     serial_to_socket = SerialToSocketServer()
+    serial_to_socket.com_name = com_name
+    serial_to_socket.com_speed = com_speed
     loop.sts: SerialToSocketServer = serial_to_socket
     loop.log_enable: bool = False
     loop.listeners: list = []

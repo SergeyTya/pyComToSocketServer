@@ -14,6 +14,7 @@ Simple Serial Port to Socket converter server driven by <b>asyncio</b> and <b>se
 - Listener client
 
 To setup client type send "type raw" or "type modbus" or "type listener" to server after or during connection 
+To get serial info send   "info"
 
 
 
