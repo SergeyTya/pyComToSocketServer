@@ -45,7 +45,7 @@ class SocketServerProtocol(asyncio.Protocol):
         except IndexError: pass
 
     def connection_made(self, transport):
-        self.type = self.client_type[0]
+        self.type = self.client_type[1]
         self.transport = transport
         peer = self.transport.get_extra_info('peername')
         print('Connection from {}'.format("{} {}".format(peer[0],peer[1])))
@@ -79,17 +79,18 @@ class SocketServerProtocol(asyncio.Protocol):
             pass
 
 async def Modbus_converter(socket_transport, data):
+    log("----------")
+    log("Socket:read: " + str(list(data)))
 
     try:
         expected_pdu_len = data[5] + (data[4]<<8) +6
         if expected_pdu_len != len(data): raise RuntimeError
     except Exception:
-        log("Socket: MODBUS TCP frame error")
-        socket_transport.write("err".encode())
+        mes = "Socket: MODBUS TCP frame error"
+        log(mes)
+        socket_transport.write(mes.encode())
         return
-
-    log("Socket:input: " + str(bytes(data)))
-
+    
     header = data[:6]
     body = list(data[6:])
     crc =util.computeCRC(body)
@@ -98,13 +99,14 @@ async def Modbus_converter(socket_transport, data):
 
     await loop.sts.lock.acquire()
     try:
+        log("Serial:write: " + str(body))
         loop.sts.writer.write(bytes(body))
         await asyncio.sleep(0.035)
         deadline = loop.time() + 1
         try:
             async with asyncio.timeout_at(deadline):
                 res = await loop.sts.reader.read(256)
-                log("Serial:input: " + str(res))
+                log("Serial:read: " + str(list(res)))
                 body = res[:len(res)-2]
                 header[4] = (0xFF00&len(body))>>8
                 header[5] = len(body)&0xff
@@ -112,14 +114,18 @@ async def Modbus_converter(socket_transport, data):
                 body = list(body)
                 packet = packet + body
                 packet = bytes(packet)
-                log("Socket:output: " + str(packet) )
+                log("Socket:write: " + str(list(packet)) )
                 socket_transport.write(packet)
                 for listener in loop.listeners:
                     listener.write(res)
         except TimeoutError:
-                log("Serial: Time out")
+                mes = "Serial: Time out"
+                log(mes)
+                socket_transport.write(mes.encode())
         except PermissionError:
-                log("Serial: Port error")
+                mes = "Serial: Port error"
+                log(mes)
+                socket_transport.write(mes.encode())
     finally:
         loop.sts.lock.release()  
 
@@ -133,14 +139,15 @@ async def RAW_converter(socket_transport, data):
 
     await loop.sts.lock.acquire()
     try:
+        log("Serial:write: " + str(list(res)))
         loop.sts.writer.write(bytes(data))
         await asyncio.sleep(0.035)
         deadline = loop.time() + 1
         try:
             async with asyncio.timeout_at(deadline):
                 res = await loop.sts.reader.read(256)
-                log("Serial:input: " + str(res))
-                log("Socket:output: " + str(res) )
+                log("Serial:read: " + str(list(res)))
+                log("Socket:write: " + str(list(res)))
                 socket_transport.write(res)
                 for listener in loop.listeners:
                     listener.write(res)
@@ -176,7 +183,7 @@ async def start_server(loop=None, com_name='COM5', com_speed=230400,ip = '124.0.
     serial_to_socket.com_name = com_name
     serial_to_socket.com_speed = com_speed
     loop.sts: SerialToSocketServer = serial_to_socket
-    loop.log_enable: bool = False
+    loop.log_enable: bool = True
     loop.listeners: list = []
     await start_serial_server(loop, com_name, com_speed)
     await start_socket_server(loop, ip, port)
