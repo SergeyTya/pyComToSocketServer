@@ -1,0 +1,1 @@
+start pyinstaller --noconfirm --onefile --console  "D:/Sergey_work/_winprog/pyComToSocketServer/CTS_server.py"
