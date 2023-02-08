@@ -1,4 +1,5 @@
 import asyncio
+import os
 import serial_asyncio
 import utilities as util
 from serial_asyncio import open_serial_connection
@@ -18,7 +19,12 @@ class SerialToSocketServer:
 def log(mes:str):
     mes ="{}: {}".format(str(loop.time()), mes)
     if loop.log_enable: print(mes)
-    
+
+def shutdown():
+    """Performs a clean shutdown"""
+    log('received sys os stop')
+    os._exit(-1)
+        
 class SocketServerProtocol(asyncio.Protocol):
 
     client_type = [   
@@ -26,7 +32,7 @@ class SocketServerProtocol(asyncio.Protocol):
         "modbus",
         "listener"
     ]
-        
+
     def parse(self, mes):
         res= shlex.split(mes)
         res = list(res)
@@ -55,6 +61,11 @@ class SocketServerProtocol(asyncio.Protocol):
             return
         try:
             mes = data.decode()
+            if mes == "close": 
+                shutdown()
+            if mes == "version": 
+               self.transport.write("v.0.0.1".encode())
+               return
             cmd = self.parse(mes)
             if cmd is not None:
                 self.transport.write(cmd.encode())
@@ -192,7 +203,7 @@ async def start_server(loop=None, com_name='COM5', com_speed=230400,ip = '124.0.
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--serial", type=str, default="COM5"     , required=False )
+    parser.add_argument("--serial", type=str, default="COM6"     , required=False )
     parser.add_argument("--speed" , type=int, default=9600       , required=False )
     parser.add_argument("--host"  , type=str, default="localhost", required=False )
     parser.add_argument("--port"  , type=int, default=8888       , required=False )
