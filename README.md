@@ -13,8 +13,15 @@ Simple Serial Port to Socket converter server driven by <b>asyncio</b> and <b>se
 - RAW data clients
 - Listener client
 
-To setup client type send "type raw" or "type modbus" or "type listener" to server after or during connection 
-To get serial info send   "info"
+<b><h3>Command List:</h3></b>
+ - 'close'   - shutdown server
+- 'version' - server version
+- 'info'    - get serial name adn speed 
+- 'type modbus' - modbus TCP client
+- 'type raw' - raw client
+- 'type listener' - listener client
+
+Use CTS_launcher.py for simple start GUI
 
 
 
