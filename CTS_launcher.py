@@ -94,14 +94,20 @@ class App(tk.Tk):
             self.main.get_serial_name(),
             self.main.get_serial_speed()
             )
-        loop.create_task(
-            start_server(
-            loop = loop, 
-            com_name=self.param.serial_name, 
-            com_speed= self.param.serial_speed, 
-            ip=self.param.socket_name, 
-            port=self.param.socket_port 
-        ))
+        
+        req = "python CTS_server.py --serial {} --speed {} --host {} --port {}".format(self.param.serial_name, self.param.serial_speed, self.param.socket_name, self.param.socket_port)
+        self.close()
+        os.system(req)
+        
+        # loop.create_task(
+        #     start_server(
+        #     loop = loop, 
+        #     com_name=self.param.serial_name, 
+        #     com_speed= self.param.serial_speed, 
+        #     ip=self.param.socket_name, 
+        #     port=self.param.socket_port 
+        # ))
+
 
     def get_serials():
         pass

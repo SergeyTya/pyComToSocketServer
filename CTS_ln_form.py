@@ -65,16 +65,16 @@ class App:
         self.GButton_Run.place(x=10,y=150,width=70,height=25)
         # self.GButton_Run["command"] = self.GButton_560_command
 
-        self.GButton_Close=tk.Button(root)
-        self.GButton_Close["bg"] = "#f0f0f0"
-        ft = tkFont.Font(family='Times',size=10)
-        self.GButton_Close["font"] = ft
-        self.GButton_Close["fg"] = "#000000"
-        self.GButton_Close["justify"] = "center"
-        self.GButton_Close["text"] = "Close"
-        self.GButton_Close.place(x=100,y=150,width=70,height=25)
-        # self.GButton_Close["command"] = (lambda : os._exit(-1))
-        self.GButton_Close["command"] = (lambda : root.destroy())
+        # self.GButton_Close=tk.Button(root)
+        # self.GButton_Close["bg"] = "#f0f0f0"
+        # ft = tkFont.Font(family='Times',size=10)
+        # self.GButton_Close["font"] = ft
+        # self.GButton_Close["fg"] = "#000000"
+        # self.GButton_Close["justify"] = "center"
+        # self.GButton_Close["text"] = "Close"
+        # self.GButton_Close.place(x=100,y=150,width=70,height=25)
+        # # self.GButton_Close["command"] = (lambda : os._exit(-1))
+        # self.GButton_Close["command"] = (lambda : root.destroy())
 
 
         self.Edit_Socket_name=tk.Entry(master=root)
