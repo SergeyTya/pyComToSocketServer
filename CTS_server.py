@@ -89,6 +89,9 @@ class SocketServerProtocol(asyncio.Protocol):
         except TypeError:
             pass
 
+
+ 
+
 async def Modbus_converter(socket_transport, data):
     log("----------")
     log("Socket:read: " + str(list(data)))
@@ -112,29 +115,29 @@ async def Modbus_converter(socket_transport, data):
     try:
         log("Serial:write: " + str(body))
         loop.sts.writer.write(bytes(body))
-        await asyncio.sleep(0.04)
+        await asyncio.sleep(0.045)
         deadline = loop.time() + 1
+        async def temp_foo():
+            res = await loop.sts.reader.read(256)
+            log("Serial:read: " + str(list(res)))
+            if util.check_CRC_frame(res) == False:
+                mes = "Serial: CRC error"
+                log(mes)
+                socket_transport.write(mes.encode())
+            else:
+                body = res[:len(res)-2]
+                header[4] = (0xFF00&len(body))>>8
+                header[5] = len(body)&0xff
+                packet = list(header)
+                body = list(body)
+                packet = packet + body
+                packet = bytes(packet)
+                log("Socket:write: " + str(list(packet)) )
+                socket_transport.write(packet)
+                for listener in loop.listeners:
+                    listener.write(res)
         try:
-            async with asyncio.timeout_at(deadline):
-                res = await loop.sts.reader.read(256)
-                log("Serial:read: " + str(list(res)))
-
-                if util.check_CRC_frame(res) == False:
-                    mes = "Serial: CRC error"
-                    log(mes)
-                    socket_transport.write(mes.encode())
-                else:
-                    body = res[:len(res)-2]
-                    header[4] = (0xFF00&len(body))>>8
-                    header[5] = len(body)&0xff
-                    packet = list(header)
-                    body = list(body)
-                    packet = packet + body
-                    packet = bytes(packet)
-                    log("Socket:write: " + str(list(packet)) )
-                    socket_transport.write(packet)
-                    for listener in loop.listeners:
-                        listener.write(res)
+            await asyncio.wait_for(temp_foo(), timeout=1.0)
         except TimeoutError:
                 mes = "Serial: Time out"
                 log(mes)
