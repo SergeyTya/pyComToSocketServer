@@ -1,0 +1,1 @@
+python3 CTS_server.py --serial /dev/ttyUSB0 --speed 230400 --host 192.168.1.112
