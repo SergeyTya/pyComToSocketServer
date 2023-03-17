@@ -105,7 +105,7 @@ async def Modbus_converter(socket_transport, data):
         socket_transport.write(mes.encode())
         return
     
-    header:list = data[:6]
+    header = list(data[:6])
     body = list(data[6:])
     crc =util.computeCRC(body)
     body.append((0xFF00&crc)>>8)
@@ -115,7 +115,7 @@ async def Modbus_converter(socket_transport, data):
     try:
         log("Serial:write: " + str(body))
         loop.sts.writer.write(bytes(body))
-        await asyncio.sleep(0.045)
+        await asyncio.sleep(0.025)
         deadline = loop.time() + 1
         try:
             async def temp_foo():
@@ -127,9 +127,9 @@ async def Modbus_converter(socket_transport, data):
                     socket_transport.write(mes.encode())
                 else:
                     body = res[:len(res)-2]
-                   # header[4] = (0xFF00&len(body))>>8
+                    header[4] = (0xFF00&len(body))>>8
                     header[5] = len(body)&0xff
-                    packet = header
+                    packet = list(header)
                     body = list(body)
                     packet = packet + body
                     packet = bytes(packet)
@@ -163,16 +163,19 @@ async def RAW_converter(socket_transport, data):
     try:
         log("Serial:write: " + str(list(res)))
         loop.sts.writer.write(bytes(data))
-        await asyncio.sleep(0.035)
+        await asyncio.sleep(0.025)
         deadline = loop.time() + 1
         try:
-            async with asyncio.timeout_at(deadline):
+            async def temp_foo_raw():
                 res = await loop.sts.reader.read(256)
                 log("Serial:read: " + str(list(res)))
                 log("Socket:write: " + str(list(res)))
                 socket_transport.write(res)
                 for listener in loop.listeners:
                     listener.write(res)
+            
+            await asyncio.wait_for(temp_foo_raw(), timeout=1.0)
+                
         except TimeoutError:
                 log("Serial: Time out")
         except PermissionError:
