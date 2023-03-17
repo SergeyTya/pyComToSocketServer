@@ -127,7 +127,7 @@ async def Modbus_converter(socket_transport, data):
                     socket_transport.write(mes.encode())
                 else:
                     body = res[:len(res)-2]
-                    header[4] = (0xFF00&len(body))>>8
+                   # header[4] = (0xFF00&len(body))>>8
                     header[5] = len(body)&0xff
                     packet = header
                     body = list(body)
