@@ -105,7 +105,7 @@ async def Modbus_converter(socket_transport, data):
         socket_transport.write(mes.encode())
         return
     
-    header = data[:6]
+    header:list = data[:6]
     body = list(data[6:])
     crc =util.computeCRC(body)
     body.append((0xFF00&crc)>>8)
@@ -129,7 +129,7 @@ async def Modbus_converter(socket_transport, data):
                     body = res[:len(res)-2]
                     header[4] = (0xFF00&len(body))>>8
                     header[5] = len(body)&0xff
-                    packet = list(header)
+                    packet = header
                     body = list(body)
                     packet = packet + body
                     packet = bytes(packet)
@@ -139,6 +139,7 @@ async def Modbus_converter(socket_transport, data):
                         listener.write(res)
       
             await asyncio.wait_for(temp_foo(), timeout=1.0)
+
         except asyncio.TimeoutError:
                 mes = "Serial: Time out"
                 log(mes)
