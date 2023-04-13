@@ -103,6 +103,7 @@ async def Modbus_converter(socket_transport, data):
         mes = "Socket: MODBUS TCP frame error"
         log(mes)
         socket_transport.write(mes.encode())
+        print(mes)
         return
     
     header = list(data[:6])
@@ -115,7 +116,7 @@ async def Modbus_converter(socket_transport, data):
     try:
         log("Serial:write: " + str(body))
         loop.sts.writer.write(bytes(body))
-        await asyncio.sleep(0.025)
+        await asyncio.sleep(0.045)
         deadline = loop.time() + 1
         try:
             async def temp_foo():
@@ -144,13 +145,16 @@ async def Modbus_converter(socket_transport, data):
                 mes = "Serial: Time out"
                 log(mes)
                 socket_transport.write(mes.encode())
+                print(mes)
         except PermissionError:
                 mes = "Serial: Port error"
                 log(mes)
                 socket_transport.write(mes.encode())
+                print(mes)
         except  Exception:
                 mes = "Serial: Unexpected error"
                 socket_transport.write(mes.encode())
+                print(mes)
     finally:
         loop.sts.lock.release()  
 
@@ -211,7 +215,7 @@ async def start_server(loop=None, com_name='COM5', com_speed=230400,ip = '124.0.
     serial_to_socket.com_name = com_name
     serial_to_socket.com_speed = com_speed
     loop.sts: SerialToSocketServer = serial_to_socket
-    loop.log_enable: bool = True
+    loop.log_enable: bool = False
     loop.listeners: list = []
     await start_serial_server(loop, com_name, com_speed)
     await start_socket_server(loop, ip, port)
