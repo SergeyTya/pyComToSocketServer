@@ -139,7 +139,7 @@ async def Modbus_converter(socket_transport, data):
                     for listener in loop.listeners:
                         listener.write(res)
       
-            await asyncio.wait_for(temp_foo(), timeout=1.0)
+            await asyncio.wait_for(temp_foo(), timeout=0.1)
 
         except asyncio.TimeoutError:
                 mes = "Serial: Time out"
