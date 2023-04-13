@@ -148,6 +148,9 @@ async def Modbus_converter(socket_transport, data):
                 mes = "Serial: Port error"
                 log(mes)
                 socket_transport.write(mes.encode())
+        except  Exception:
+                mes = "Serial: Unexpected error"
+                socket_transport.write(mes.encode())
     finally:
         loop.sts.lock.release()  
 
