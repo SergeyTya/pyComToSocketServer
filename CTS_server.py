@@ -120,7 +120,7 @@ async def Modbus_converter(socket_transport, data):
         deadline = loop.time() + 1
         try:
             async def temp_foo():
-                res = await loop.sts.reader.read(256)
+                res = await loop.sts.reader.read(2048)
                 log("Serial:read: " + str(list(res)))
                 if util.check_CRC_frame(res) == False:
                     mes = "Serial: CRC error"
@@ -155,6 +155,12 @@ async def Modbus_converter(socket_transport, data):
                 mes = "Serial: Unexpected error"
                 socket_transport.write(mes.encode())
                 print(mes)
+                exit()
+    except  Exception:
+        mes = "Serial: Unexpected error"
+        socket_transport.write(mes.encode())
+        print(mes)
+        exit()
     finally:
         loop.sts.lock.release()  
 
@@ -168,13 +174,13 @@ async def RAW_converter(socket_transport, data):
 
     await loop.sts.lock.acquire()
     try:
-        log("Serial:write: " + str(list(res)))
+        log("Serial:write: " + str(list(data)))
         loop.sts.writer.write(bytes(data))
         await asyncio.sleep(0.025)
         deadline = loop.time() + 1
         try:
             async def temp_foo_raw():
-                res = await loop.sts.reader.read(256)
+                res = await loop.sts.reader.read(2048)
                 log("Serial:read: " + str(list(res)))
                 log("Socket:write: " + str(list(res)))
                 socket_transport.write(res)
@@ -187,6 +193,16 @@ async def RAW_converter(socket_transport, data):
                 log("Serial: Time out")
         except PermissionError:
                 log("Serial: Port error")
+        except  Exception:
+                mes = "Serial: Unexpected error"
+                socket_transport.write(mes.encode())
+                print(mes)
+                exit()
+    except  Exception:
+        mes = "Serial: Unexpected error"
+        socket_transport.write(mes.encode())
+        print(mes)
+        exit()
     finally:
         loop.sts.lock.release()  
 
@@ -202,6 +218,7 @@ async def start_serial_server(loop=None, com_name='COM4', com_speed=230400):
     if loop is None:
         loop = asyncio.get_event_loop()
     reader, writer = await open_serial_connection(loop=loop, url=com_name, baudrate=com_speed)
+    #reader.exception()
     print('Serving Serial on {}:{}'.format(com_name, com_speed))
     loop.sts.writer = writer
     loop.sts.reader = reader
@@ -215,10 +232,19 @@ async def start_server(loop=None, com_name='COM5', com_speed=230400,ip = '124.0.
     serial_to_socket.com_name = com_name
     serial_to_socket.com_speed = com_speed
     loop.sts: SerialToSocketServer = serial_to_socket
-    loop.log_enable: bool = False
+    # loop.log_enable: bool = False
+    loop.log_enable: bool = True
     loop.listeners: list = []
     await start_serial_server(loop, com_name, com_speed)
     await start_socket_server(loop, ip, port)
+   
+async def watchdog(loop):
+    while True:
+        await asyncio.sleep(1.0)
+        ex = str(loop.sts.reader.exception())
+        if ex.find("PermissionError(13") != -1:
+           quit()
+
 
 
 if __name__ == "__main__":
@@ -233,5 +259,7 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(start_server(loop = loop, com_name=args.serial, com_speed=args.speed, ip=args.host, port=args.port ))
+    loop.run_until_complete(watchdog(loop = loop))
+
     loop.run_forever()
     loop.close()

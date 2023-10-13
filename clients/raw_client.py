@@ -1,5 +1,9 @@
 import asyncio
+import os
 import utilities as util
+import zlib
+import time
+import numpy as np
 
 class EchoClientProtocol(asyncio.Protocol):
 
@@ -13,7 +17,8 @@ class EchoClientProtocol(asyncio.Protocol):
         print('Data sent: {!r}'.format(self.message))
 
     def data_received(self, data):
-        print("--->" + str(data))
+        print("<---" + str(data))
+        print("<---",str(time.time()), "len=", len(data))
 
     def connection_lost(self, exc):
         print('The server closed the connection')
@@ -30,10 +35,18 @@ async def client():
     loop.create_task(wait_for_con_lost(transport))
 
     while True:
-        req = bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x05, 0x85, 0xC9])
+        # req = bytearray([0x01, 0x03, 0x00, 0x00, 0x00, 0x01])
+        req = bytearray([0x01, 0x14])
+        crc =util.computeCRC(req)
+        req.append((0xFF00&crc)>>8)
+        req.append(0x00FF&crc)
         protocol.message = req
         protocol.resume_writing(transport)
+        print("--->",str(time.time()) + "  "+ str( protocol.message))
+      
+        
         await asyncio.sleep(0.50)
+
 
 
 
